@@ -1,1 +1,1 @@
-export const BACKEND_URL = "http://localhost:3001" ;
+export const BACKEND_URL = "https://bar-backend-2.onrender.com" ;
