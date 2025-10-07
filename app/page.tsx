@@ -17,8 +17,8 @@ export default function Home() {
   const preferred_timeRef = useRef<HTMLSelectElement>(null); 
 
   const [showModal, setShowModal] = useState(false)
-  const [loyal_form , setloyalform] = useState(false) 
-
+  const [loyal_form , setloyalform] = useState(false)
+  const [showBookingConfirm, setShowBookingConfirm] = useState(false)
   useEffect(() => {
      
     const timer = setTimeout(() => {
@@ -34,12 +34,12 @@ export default function Home() {
     setShowModal(false)
     setloyalform(true) 
   }
-
   const handleDismiss = () => {
     setShowModal(false)
   }
 
-  const handleSignup = async () => {
+const handleSignup = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  e.preventDefault();
   const name = nameRef.current?.value;
   const email = emailRef.current?.value;
   const phone = phoneRef.current?.value;
@@ -59,38 +59,45 @@ export default function Home() {
     });
 
     console.log("Booking Response:", response.data);
-    alert("Booking successful!");
+    setShowBookingConfirm(true);
+    
+    // Clear form fields
+    if (nameRef.current) nameRef.current.value = '';
+    if (emailRef.current) emailRef.current.value = '';
+    if (phoneRef.current) phoneRef.current.value = '';
+    if (serviceRef.current) serviceRef.current.value = 'Select a service';
+    if (preferred_dateRef.current) preferred_dateRef.current.value = '';
+    if (preferred_timeRef.current) preferred_timeRef.current.value = 'Select a time';
   } catch (error) {
     console.error("Booking failed:", error);
-    alert("Booking failed.");
+    alert("Booking failed. Please try again.");
   }
 }; 
-
-
   return (
     <main className="min-h-screen bg-black text-white">
       
       <section className="relative h-screen flex items-center justify-center">
-       
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="https://imgs.search.brave.com/XzFx4rFSM4f6c47WjLS-UVb-zblSZrM4TXDi8ia8xfQ/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90aHVt/YnMuZHJlYW1zdGlt/ZS5jb20vYi9leHRl/cmlvci1jbGFzc2lj/by1iYXJiZXItc2hv/cC1tJUMzJUI2bG5k/YWwtc3dlZGVuLW1h/cmNoLTI3OTM2NDg4/NC5qcGc"
-            alt="Barber cutting hair"
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-black/70"></div>
-        </div>
+  <div className="absolute inset-0 z-0">
+    <Image
+      src="/photos/main_shop_photo.png"
+      alt="Barber cutting hair"
+      fill
+      className="object-cover object-center"
+      priority
+      style={{ objectPosition: 'center 20%' }}
+    />
+    <div className="absolute inset-0 bg-black/70"></div>
+  </div>
+  
+  <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+    <h1 className="text-5xl md:text-7xl font-serif mb-6">
+      Samir's Salon. <br />
+      Style. Rewards. Repeat.
+    </h1>
+    <p className="text-xl md:text-2xl mb-12 text-gray-300">
+      Where Every Visit <span className="text-amber-400 font-semibold">Pays Off</span> — Earn rewards with every service.
+    </p>
 
-        
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-7xl font-serif mb-6">
-            Classic Cuts.
-            <br />
-            Modern Loyalty.
-          </h1>
-          <p className="text-xl md:text-2xl mb-12 text-gray-300">Earn rewards every time with our Loyalty Card.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button  className="bg-amber-800 hover:bg-amber-700 text-white px-8 py-6 text-lg rounded-sm"
             onClick={() => {
@@ -122,7 +129,7 @@ export default function Home() {
           </div>
           <div className="relative h-80 md:h-96">
             <Image
-              src="https://imgs.search.brave.com/2WbCx9yjMC-bmEKs_JBmsexBPPTZoimnijhnvdPFP5M/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pbWdj/ZG4uc3RhYmxlZGlm/ZnVzaW9ud2ViLmNv/bS8yMDI0LzkvMTUv/ZTE1NmMyOTYtYTYw/Ni00ZmExLThhNGQt/MWYxYTlhNzAxYzNi/LmpwZw"
+              src="/photos/door_open.png"
               alt="Barbershop interior"
               fill
               className="object-cover rounded-md"
@@ -133,55 +140,63 @@ export default function Home() {
 
       {/* Our Barbers Section */}
       <section className="py-20 px-4 bg-zinc-900">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-serif mb-16 text-center">Our Barbers</h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Barber 1 */}
-            <div className="text-center bg-zinc-800 p-8 rounded-sm">
-              <div className="relative w-48 h-48 mx-auto mb-6">
-                <Image
-                  src="https://imgs.search.brave.com/D9RCIxk4jrdSRGjENOIx3pOccDuX3EuOi34nZK-Goxg/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTcx/NzQ2ODMyMy9waG90/by9wb3J0cmFpdC1v/Zi1wcm91ZC1iYXJi/ZXJzaG9wLW93bmVy/LWluLWhpcy1zaG9w/LmpwZz9zPTYxMng2/MTImdz0wJms9MjAm/Yz1nWklvQUphR2J6/b2NUSE1SN0dVdUdO/ZjltWnB3OE1VVFdy/cUJBa0wwZ0FNPQ"
-                  alt="James - Barber"
-                  fill
-                  className="object-cover rounded-full"
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-4xl md:text-5xl font-serif mb-3 text-center">Meet Our Master Stylist</h2>
+        <p className="text-center text-gray-400 mb-16 text-lg">Creating beauty, building confidence</p>
+        
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-5 gap-8 items-center bg-zinc-800 p-8 md:p-10 rounded-lg">
+            {/* Stylist Image */}
+            <div className="md:col-span-2">
+              <div className="w-56 h-56 md:w-64 md:h-64 mx-auto">
+                <img
+                  src="/photos/samir_sir.png"
+                  alt="Samir - Master Stylist"
+                  className="w-full h-full object-cover rounded-full border-4 border-amber-600"
+                  style={{ objectPosition: 'center 20%' }}
                 />
               </div>
-              <h3 className="text-3xl font-serif mb-2">James</h3>
-              <p className="text-gray-300">Classic Haircuts</p>
             </div>
-
-            {/* Barber 2 */}
-            <div className="text-center bg-zinc-800 p-8 rounded-sm">
-              <div className="relative w-48 h-48 mx-auto mb-6">
-                <Image
-                  src="https://imgs.search.brave.com/SiPvtlbyjz-RYgZ2SF6KJSGVDcNtdUFK8aityQyqHqI/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9pbWcu/ZnJlZXBpay5jb20v/cHJlbWl1bS1waG90/by9waG90by1jYXVj/YXNpYW4tYmFyYmVy/aW5nLW1hbi1iYWNr/Z3JvdW5kLWJhcmJl/cmluZy1tYW4taXNv/bGF0ZWQtYmxhY2tf/NDc0NzE3LTEzMDMz/OS5qcGc_c2VtdD1h/aXNfaXRlbXNfYm9v/c3RlZCZ3PTc0MA"
-                  alt="Michael - Barber"
-                  fill
-                  className="object-cover rounded-full"
-                />
+            
+            {/* Stylist Info */}
+            <div className="md:col-span-3 text-center md:text-left">
+              <h3 className="text-4xl md:text-5xl font-serif mb-2">Samir</h3>
+              <p className="text-amber-400 text-xl mb-6">Master Hair Stylist & Founder</p>
+              
+              <p className="text-gray-300 leading-relaxed mb-6">
+                With over 15 years of experience, Samir specializes in creating stunning transformations for women. From precision cuts to beautiful color work and special occasion styling, he brings expertise and artistry to every appointment.
+              </p>
+              
+              <div className="mb-6">
+                <h4 className="text-white font-semibold mb-3">Specialties</h4>
+                <div className="space-y-2 text-gray-300">
+                  <div className="flex items-start">
+                    <span className="text-amber-400 mr-2">•</span>
+                    <span>Hair Coloring & Highlights</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-amber-400 mr-2">•</span>
+                    <span>Precision Cuts & Styling</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-amber-400 mr-2">•</span>
+                    <span>Bridal & Event Styling</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-amber-400 mr-2">•</span>
+                    <span>Keratin & Hair Treatments</span>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-3xl font-serif mb-2">Michael</h3>
-              <p className="text-gray-300">Fades & Tapers</p>
-            </div>
-
-            {/* Barber 3 */}
-            <div className="text-center bg-zinc-800 p-8 rounded-sm">
-              <div className="relative w-48 h-48 mx-auto mb-6">
-                <Image
-                  src="https://imgs.search.brave.com/ouvAALCoM0cr6Q4ANCYBiiATTe1hAaRIVDsejn89DdI/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTM0/MDQ1MjE1My9waG90/by9wb3J0cmFpdC1v/Zi1hLWJhcmJlci5q/cGc_cz02MTJ4NjEy/Jnc9MCZrPTIwJmM9/SDU2OVhGOG8tV252/T2dnYXhCRnhrYUh2/Vko4SnBSX3V6eGsx/cjRFd21GMD0"
-                  alt="Ethan - Barber"
-                  fill
-                  className="object-cover rounded-full"
-                />
-              </div>
-              <h3 className="text-3xl font-serif mb-2">Ethan</h3>
-              <p className="text-gray-300">Beard Sculpting</p>
+              
+              <button className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300">
+                Book with Samir
+              </button>
             </div>
           </div>
         </div>
-      </section>
-
+      </div>
+    </section>
       {/* Services Section */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
@@ -192,13 +207,13 @@ export default function Home() {
             <div
     className="relative border border-amber-800 rounded-sm bg-cover bg-center text-white p-8"
     style={{
-      backgroundImage: "url('https://imgs.search.brave.com/bTOBzGgL_M1coXsTMRMcNMJGiQfF1EdDqmSSOsc0aEQ/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/c2hvcGlmeS5jb20v/cy9maWxlcy8xLzAy/NTUvMjQxNy80OTIy/L2ZpbGVzL1F1aWZm/X0hhaXJzdHlsZV8t/X0NsYXNzaWNfSGFp/cnN0eWxlc19Gb3Jf/TWVuXzFfNDgweDQ4/MC5qcGc_dj0xNzI0/NzY3Mzk3')", // <-- Put your image path here
+      backgroundImage: "url('/photos/styling_haircuts.png')", // <-- Put your image path here
     }}
   >
     <div className="absolute inset-0 bg-black/50 rounded-sm"></div> {/* Optional overlay */}
     
     <div className="relative z-10">
-      <h3 className="text-2xl font-serif mb-4">Classic Cut</h3>
+      <h3 className="text-2xl font-serif mb-4">Signature Haircuts & Styling</h3>
       <p className="text-gray-300 mb-4">Traditional haircut with attention to detail and precision.</p>
       <p className="text-amber-400 text-xl font-semibold">$35</p>
     </div>
@@ -208,7 +223,7 @@ export default function Home() {
             <div
     className="relative border border-amber-800 rounded-sm bg-cover bg-center text-white p-8"
     style={{
-      backgroundImage: "url('https://imgs.search.brave.com/tJHWINUj-QgOfzHoyMoECS1SJvnbo_SpLlSrCWRx5S8/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzL2NmLzY5/LzZkL2NmNjk2ZDVm/MzBiZDllYTk4NjEz/NTRjMzJmNDAyMDE3/LmpwZw')", // <-- Put your image path here
+      backgroundImage: "url('/photos/coloring_hair.png')", // <-- Put your image path here
     }}
   >
     <div className="absolute inset-0 bg-black/50 rounded-sm"></div> {/* Optional overlay */}
@@ -224,7 +239,7 @@ export default function Home() {
             <div
     className="relative border border-amber-800 rounded-sm bg-cover bg-center text-white p-8"
     style={{
-      backgroundImage: "url('https://imgs.search.brave.com/upkehBClYFqea-g7J6oLuuXlIw6gd3oakQDwFgQK4X4/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly90aHVt/YnMuZHJlYW1zdGlt/ZS5jb20vYi9iZWFy/ZC10cmltLWJhcmJl/cnNob3AtaW5kb29y/LXBvcnRyYWl0LWVs/ZWdhbnQtYWR1bHQt/bWFuLWJhcmJlci1o/YWlyLWdldHRpbmct/dHJpbS1oaXMtZmFj/aWFsLWhhaXItYmVh/cmQtdHJpbS0yNjQx/MTQ4ODUuanBn')", // <-- Put your image path here
+      backgroundImage: "url('/photos/hair_treatment.png')", // <-- Put your image path here
     }}
   >
     <div className="absolute inset-0 bg-black/50 rounded-sm"></div> {/* Optional overlay */}
@@ -239,7 +254,7 @@ export default function Home() {
              <div
     className="relative border border-amber-800 rounded-sm bg-cover bg-center text-white p-8"
     style={{
-      backgroundImage: "url('https://imgs.search.brave.com/GcaKgGMfjJzp6nmEo1CTAVH0TWdeqPb62yyw1og1Zz8/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly93d3cu/c3R5bGVzZWF0LmNv/bS9ibG9nL3dwLWNv/bnRlbnQvdXBsb2Fk/cy8yMDIxLzExL3Bl/cnNvbi1nZXR0aW5n/LWhvdC10b3dlbC1z/aGF2ZS5qcGc')", // <-- Put your image path here
+      backgroundImage: "url('/photos/nails.png')", // <-- Put your image path here
     }}
   >
     <div className="absolute inset-0 bg-black/50 rounded-sm"></div> {/* Optional overlay */}
@@ -255,7 +270,7 @@ export default function Home() {
              <div
     className="relative border border-amber-800 rounded-sm bg-cover bg-center text-white p-8"
     style={{
-      backgroundImage: "url('https://imgs.search.brave.com/C2R2x9JdwM8ioPD6hZLliNmN_WGcRTWzOQ6I6ZLDDsY/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMudmVjdGVlenku/Y29tL3N5c3RlbS9y/ZXNvdXJjZXMvdGh1/bWJuYWlscy8wMDQv/Nzc0Lzg4OS9zbWFs/bC9tYWxlLWJhcmJl/ci1tYWtlcy1hLWhh/aXJjdXQtYmVhcmQt/Y2xpZW50LXdpdGgt/dmludGFnZS1zdHJh/aWdodC1yYXpvci1w/aG90by5qcGc')", // <-- Put your image path here
+      backgroundImage: "url('/photos/manicure.png')", // <-- Put your image path here
     }}
   >
     <div className="absolute inset-0 bg-black/50 rounded-sm"></div> {/* Optional overlay */}
@@ -271,7 +286,7 @@ export default function Home() {
              <div
     className="relative border border-amber-800 rounded-sm bg-cover bg-center text-white p-8"
     style={{
-      backgroundImage: "url('https://imgs.search.brave.com/SvT-LyESKhsZxN55wsLVXySJiMe1iX9vVAIMaFVJBBY/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvMTUy/MTExOTgzL3Bob3Rv/L2hhaXItY3V0Lmpw/Zz9zPTYxMng2MTIm/dz0wJms9MjAmYz1w/M0NNMUlCR1E5Y0dU/TjVuVzdscTRqMXNF/ZXF3Tk4zdGtXeUIx/NTlqMVVRPQ')", // <-- Put your image path here
+      backgroundImage: "url('/photos/bridal.png')", // <-- Put your image path here
     }}
   >
     <div className="absolute inset-0 bg-black/50 rounded-sm"></div> {/* Optional overlay */}
@@ -300,25 +315,25 @@ export default function Home() {
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
                   1
                 </span>
-                <span>Sign up for our loyalty card in-store or online</span>
+                <span>Scan QR code at checkout and get +150 bonus points</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
                   2
                 </span>
-                <span>Earn 10 points for every dollar spent</span>
+                <span>Earn 10 points for every ₹100 you spend</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
                   3
                 </span>
-                <span>Redeem 500 points for $5 off your service</span>
+                <span>Leave a Google review and get +200 bonus points</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
                   4
                 </span>
-                <span>Enjoy exclusive member-only promotions</span>
+                <span>Redeem points for discounts and exclusive rewards</span>
               </li>
             </ul>
           </div>
@@ -330,7 +345,6 @@ export default function Home() {
           </Button>
         </div>
       </section>
-
       {/* Contact Section */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
@@ -359,9 +373,7 @@ export default function Home() {
                   />
                 </svg>
                 <span>
-                  123 Main Street, Downtown
-                  <br />
-                  New York, NY 10001
+                  HIRANANDANI MEADOWS, Emerald Plaza, Shop No. 21, Block No. 2, Pokharan Rd No. 2, Thane West, Thane, Maharashtra 400601
                 </span>
               </p>
               <p className="flex items-start gap-3">
@@ -402,30 +414,13 @@ export default function Home() {
                     d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                   />
                 </svg>
-                <span>(555) 123-4567</span>
-              </p>
-              <p className="flex items-start gap-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-amber-600 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>info@classicbarbershop.com</span>
+                <span>+91 7738466566</span>
               </p>
             </div>
           </div>
           <div ref={bookingFormRef}>
             <h2 className="text-4xl md:text-5xl font-serif mb-8">Book Now</h2>
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
                   Name
@@ -468,6 +463,7 @@ export default function Home() {
                   id="service"
                   className="w-full bg-zinc-800 border-zinc-700 rounded-sm px-4 py-3 text-white focus:ring-amber-600 focus:border-amber-600"
                 >
+
                   <option>Select a service</option>
                   <option>Classic Cut</option>
                   <option>Fade & Taper</option>
@@ -511,15 +507,13 @@ export default function Home() {
                   <option>7:00 PM</option>
                 </select>
               </div>
-              <Button onClick = {handleSignup} className="w-full bg-amber-800 hover:bg-amber-700 text-white px-8 py-6 text-lg rounded-sm">
+              <Button onClick={handleSignup} className="w-full bg-amber-800 hover:bg-amber-700 text-white px-8 py-6 text-lg rounded-sm" type="button">
                 Book Appointment
               </Button>
             </form>
           </div>
         </div>
-      </section>
-
-     
+      </section> 
       <footer className="py-12 px-4 bg-zinc-900 text-gray-300">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-8 mb-12">
@@ -527,17 +521,7 @@ export default function Home() {
               <h3 className="text-xl font-serif mb-4 text-white">Classic Barbershop</h3>
               <p className="mb-4">Where tradition meets modern style.</p>
               <div className="flex space-x-4">
-                <a href="#" className="text-gray-300 hover:text-amber-600">
-                  <span className="sr-only">Facebook</span>
-                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      fillRule="evenodd"
-                      d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-300 hover:text-amber-600">
+                <a href="https://www.instagram.com/samirs_salon/" className="text-gray-300 hover:text-amber-600">
                   <span className="sr-only">Instagram</span>
                   <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path
@@ -545,12 +529,6 @@ export default function Home() {
                       d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
                       clipRule="evenodd"
                     />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-300 hover:text-amber-600">
-                  <span className="sr-only">Twitter</span>
-                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
                   </svg>
                 </a>
               </div>
@@ -606,7 +584,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-zinc-800 pt-8 text-center">
-            <p>&copy; {new Date().getFullYear()} Classic Barbershop. All rights reserved.</p>
+            <p>&copy;{new Date().getFullYear()} Classic Barbershop. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -722,6 +700,58 @@ export default function Home() {
      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
     <Loyal_Form />
      </div>
+    )}
+
+    {/* Booking Confirmation Modal */}
+    {showBookingConfirm && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setShowBookingConfirm(false)} />
+        
+        <div className="relative bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-2 border-green-600/40 rounded-2xl shadow-2xl max-w-md w-full animate-modal-in overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-600 via-green-500 to-green-600"></div>
+          
+          <button
+            onClick={() => setShowBookingConfirm(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10 p-1 rounded-full hover:bg-gray-800/50"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          <div className="p-8 text-center">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-500 to-green-600 rounded-full p-4 shadow-lg">
+                  <svg className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl md:text-3xl font-serif font-bold text-white mb-4">
+              Booking Confirmed!
+            </h2>
+
+            <p className="text-green-400 font-semibold text-lg mb-4">
+              Your appointment has been successfully booked.
+            </p>
+
+            <p className="text-gray-300 text-sm leading-relaxed mb-8">
+              We'll send you a confirmation message shortly. Looking forward to seeing you!
+            </p>
+
+            <Button
+              onClick={() => setShowBookingConfirm(false)}
+              className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105"
+            >
+              Great, Thanks!
+            </Button>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/50 to-transparent"></div>
+        </div>
+      </div>
     )}
 
     </main>

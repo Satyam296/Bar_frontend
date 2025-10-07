@@ -279,8 +279,7 @@ export default function BarberDashboard() {
     const stream = videoRef.current?.srcObject
     stream?.getTracks().forEach((track) => track.stop())
     bookingsRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
+  }  
   // Statistics
   const loyalCustomers = bookingList.filter((b) => b.isLoyal).length
   const regularCustomers = bookingList.length - loyalCustomers
@@ -295,11 +294,10 @@ export default function BarberDashboard() {
             <Scissors className="h-4 w-4 text-white" />
           </div>
           <div>
-            <span className="text-lg font-bold text-white">Classic Barbershop</span>
+            <span className="text-lg font-bold text-white">Samir Salon</span>
             <span className="ml-2 text-sm text-orange-400">Admin</span>
           </div>
         </div>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-orange-900/20">
@@ -340,7 +338,6 @@ export default function BarberDashboard() {
               />
             </div>
           </div>
-
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {bookingList.map((booking) => (
               <Card
@@ -392,7 +389,6 @@ export default function BarberDashboard() {
                               onCheckedChange={() => toggleBookingDone(booking.id)}
                               className="border-orange-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
 />
-
                       <label
                         htmlFor={`done-${booking.id}`}
                         className={`text-sm font-medium ${booking.done ? "text-green-400" : "text-white"}`}
@@ -417,7 +413,6 @@ export default function BarberDashboard() {
             ))}
           </div>
         </section>
-
         {/* Section 2: QR Scanner */}
         <section ref={scannerRef} className="space-y-6">
   <div className="flex items-center justify-between">
@@ -448,14 +443,12 @@ export default function BarberDashboard() {
           </Button>
         )}
       </div>
-
       {capturedImage && (
         <div className="mt-4">
           <p className="text-sm text-white mb-2">Captured QR Image:</p>
           <img src={capturedImage} alt="Captured Preview" className="rounded border border-orange-600" />
         </div>
       )}
-
       {qrResult && (
         <Card className="bg-green-900/20 border-green-600/30">
           <CardContent className="pt-4">
@@ -476,7 +469,6 @@ export default function BarberDashboard() {
     </CardContent>
   </Card>
 </section>
-
         {/* Section 3: Analytics Overview */}
         <section className="space-y-6">
           <h2 className="text-3xl font-bold text-white">Analytics Overview</h2>
@@ -492,7 +484,6 @@ export default function BarberDashboard() {
                 <p className="text-xs text-gray-400">{completedBookings} completed</p>
               </CardContent>
             </Card>
-
             <Card className="bg-gray-900 border-orange-900/20">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-white">Loyalty Points Given</CardTitle>
@@ -529,10 +520,7 @@ export default function BarberDashboard() {
             </p>
           </CardContent>
         </Card>
-
-
           </div>
-
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Weekly Bookings Chart */}
             <Card className="bg-gray-900 border-orange-900/20">
