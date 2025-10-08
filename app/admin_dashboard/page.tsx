@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
-import { Calendar, QrCode, Scissors, LogOut, User, Check, Clock, Star, ArrowUp, Camera } from "lucide-react"
+import { Calendar, QrCode, Scissors, LogOut, User, Check, Clock, Star, ArrowUp, Camera, X, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation"
 import axios from "axios"
 import jsQR from "jsqr"
 import { BACKEND_URL } from "@/components/config"
+import useAdminAuth from "@/hooks/useAdminAuth"
 
 interface Booking {
   id: string;
@@ -32,6 +33,7 @@ interface WeeklyData {
 const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 export default function BarberDashboard() {
+  useAdminAuth()
   const [bookingList, setBookingList] = useState<Booking[]>([])
   const [money, setMoney] = useState(0)
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([])
@@ -43,12 +45,18 @@ export default function BarberDashboard() {
   const [cameraActive, setCameraActive] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [leaderboard, setLeaderboard] = useState<{ name: string; point: number }[]>([])
-
+  const [showAmountCard, setShowAmountCard] = useState(false)
+  const [amountInput, setAmountInput] = useState("")
+  const [pendingCustomer, setPendingCustomer] = useState<any>(null)
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
+  const [currentCameraId, setCurrentCameraId] = useState<string>("")
 
   const scannerRef = useRef<HTMLElement>(null)
   const bookingsRef = useRef<HTMLElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  
 
   // Fetch bookings when date changes
   useEffect(() => {
@@ -67,26 +75,33 @@ export default function BarberDashboard() {
   }
 
   const fetchLeaderboard = async () => {
-  try {
-    const res = await axios.get(`${BACKEND_URL}/api/v1/admin/loyalty-leaderboard`);
-    setLeaderboard(res.data.leaderboard.map((user: any) => ({
-      name: user.name,
-      point: parseInt(user.point || 0)
-    })));
-  } catch (err) {
-    console.error("Failed to fetch leaderboard", err);
-  }
-};
+    try {
+      const res = await axios.get(`${BACKEND_URL}/api/v1/admin/loyalty-leaderboard`);
+      setLeaderboard(res.data.leaderboard.map((user: any) => ({
+        name: user.name,
+        point: parseInt(user.point || 0)
+      })));
+    } catch (err) {
+      console.error("Failed to fetch leaderboard", err);
+    }
+  };
 
-useEffect(() => {
-  fetchLeaderboard();
-}, []);
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
 
   // Fetch all bookings
   const all_names = async () => {
     const dates = dateRef.current?.value || selectedDate
+    const token = localStorage.getItem("adminToken")
+
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/v1/admin/all`, { date: dates })
+      const response = await axios.post(
+        `${BACKEND_URL}/api/v1/admin/all`,
+        { date: dates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
       const bookings = response.data.message.map((b: any) => ({
         id: b._id,
         name: b.name,
@@ -103,6 +118,61 @@ useEffect(() => {
     }
   }
 
+  // Handle amount submission
+  const handleAmountSubmit = async () => {
+    if (!pendingCustomer) return;
+
+    const serviceAmount = parseFloat(amountInput)
+    if (isNaN(serviceAmount) || serviceAmount <= 0) {
+      setQrResult("❌ Invalid amount entered.")
+      setShowAmountCard(false)
+      return
+    }
+
+    const pointsToAdd = Math.floor(serviceAmount * 0.1)
+
+    try {
+      await axios.post(`${BACKEND_URL}/api/v1/admin/add-points`, { 
+        userId: pendingCustomer._id,
+        points: pointsToAdd,
+        serviceAmount
+      })
+
+      const updatedCustomer = {
+        ...pendingCustomer,
+        points: parseInt(pendingCustomer.point || "0") + pointsToAdd,
+        done: true,
+        status: "done"
+      }
+
+      setScannedCustomer(updatedCustomer)
+      setQrResult(`✅ ${pendingCustomer.name} earned +${pointsToAdd} points!`)
+      all_names()
+      await fetchLeaderboard();
+      
+    } catch (err) {
+      console.error("Failed to add points", err)
+      setQrResult("❌ Failed to add points")
+    }
+
+    setShowAmountCard(false)
+    setAmountInput("")
+    setPendingCustomer(null)
+  }
+
+  // Get available cameras
+  const getCameras = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const videoDevices = devices.filter(device => device.kind === 'videoinput')
+      setAvailableCameras(videoDevices)
+      return videoDevices
+    } catch (err) {
+      console.error("Error getting cameras:", err)
+      return []
+    }
+  }
+
   // Camera controls
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject instanceof MediaStream) {
@@ -112,18 +182,72 @@ useEffect(() => {
     }
   }
 
-  const startCamera = async () => {
+  const startCamera = async (facingMode: "user" | "environment" = "environment", deviceId?: string) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      stopCamera() // Stop any existing camera
+
+      const constraints: MediaStreamConstraints = {
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: deviceId ? undefined : facingMode,
+          deviceId: deviceId ? { exact: deviceId } : undefined
+        }
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      
       if (videoRef.current) {
-        //@ts-ignore
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play()
         setCameraActive(true)
+        
+        // Get the actual device ID being used
+        const videoTrack = stream.getVideoTracks()[0]
+        if (videoTrack) {
+          setCurrentCameraId(videoTrack.getSettings().deviceId || "")
+        }
+        
+        // Update available cameras
+        await getCameras()
       }
     } catch (err) {
       console.error("Camera access denied:", err)
+      // Fallback to basic constraints if specific camera fails
+      if (deviceId || facingMode !== "user") {
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true })
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream
+            await videoRef.current.play()
+            setCameraActive(true)
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback camera also failed:", fallbackErr)
+        }
+      }
     }
+  }
+
+  // Switch between front and back camera
+  const switchCamera = async () => {
+    const cameras = await getCameras()
+    
+    if (cameras.length <= 1) {
+      // If only one camera, toggle between user and environment
+      const newFacingMode = facingMode === "user" ? "environment" : "user"
+      setFacingMode(newFacingMode)
+      await startCamera(newFacingMode)
+      return
+    }
+
+    // If multiple cameras, cycle through them
+    const currentIndex = cameras.findIndex(cam => cam.deviceId === currentCameraId)
+    const nextIndex = (currentIndex + 1) % cameras.length
+    const nextCamera = cameras[nextIndex]
+    
+    setCurrentCameraId(nextCamera.deviceId)
+    await startCamera("environment", nextCamera.deviceId)
   }
 
   // QR Scanner Logic
@@ -150,43 +274,9 @@ useEffect(() => {
 
         if (verifyRes.data.user) {
           const customer = verifyRes.data.user
-          const amountStr = prompt(`Enter service amount for ${customer.name}:`)
-          if (!amountStr) {
-            setQrResult("❌ No amount entered.")
-            return
-          }
-
-          const serviceAmount = parseFloat(amountStr)
-          if (isNaN(serviceAmount) || serviceAmount <= 0) {
-            setQrResult("❌ Invalid amount entered.")
-            return
-          }
-
-          const pointsToAdd = Math.floor(serviceAmount * 0.1)
-
-          try {
-            await axios.post(`${BACKEND_URL}/api/v1/admin/add-points`, { 
-              userId: customer._id,
-              points: pointsToAdd,
-              serviceAmount
-            })
-
-            const updatedCustomer = {
-              ...customer,
-              points: parseInt(customer.point || "0") + pointsToAdd,
-              done: true,
-              status: "done"
-            }
-
-            setScannedCustomer(updatedCustomer)
-            setQrResult(`✅ ${customer.name} earned +${pointsToAdd} points!`)
-            all_names()
-            await fetchLeaderboard();
-
-          } catch (err) {
-            console.error("Failed to add points", err)
-            setQrResult("❌ Failed to add points")
-          }
+          setPendingCustomer(customer)
+          setShowAmountCard(true)
+          stopCamera()
 
         } else {
           setQrResult("❌ Invalid QR code or customer not found")
@@ -242,32 +332,111 @@ useEffect(() => {
 
       {/* Main Content */}
       <main className="space-y-8 p-6">
+        {/* Amount Input Card Modal */}
+        {showAmountCard && pendingCustomer && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <Card className="bg-gray-900 border-orange-900/20 w-full max-w-md">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-white">Enter Service Amount</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    For customer: {pendingCustomer.name}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowAmountCard(false)
+                    setPendingCustomer(null)
+                    setAmountInput("")
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="amount" className="text-sm font-medium text-gray-300">
+                    Service Amount (₹)
+                  </label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Enter amount"
+                    value={amountInput}
+                    onChange={(e) => setAmountInput(e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    autoFocus
+                  />
+                </div>
+                {amountInput && !isNaN(parseFloat(amountInput)) && (
+                  <div className="bg-gray-800 p-3 rounded-lg">
+                    <p className="text-sm text-gray-400">
+                      Points to be added: <span className="text-orange-400 font-semibold">
+                        {Math.floor(parseFloat(amountInput) * 0.1)} points
+                      </span>
+                    </p>
+                  </div>
+                )}
+                <Button 
+                  onClick={handleAmountSubmit}
+                  disabled={!amountInput || isNaN(parseFloat(amountInput)) || parseFloat(amountInput) <= 0}
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Add Points
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <section ref={scannerRef} className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-3xl font-bold text-white">QR Scanner</h2>
-            {cameraActive && (
-              <Button onClick={stopCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20">
-                <ArrowUp className="h-4 w-4 mr-2" /> Stop Camera
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {cameraActive && availableCameras.length > 1 && (
+                <Button onClick={switchCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20">
+                  <RotateCcw className="h-4 w-4 mr-2" /> Switch Camera
+                </Button>
+              )}
+              {cameraActive && (
+                <Button onClick={stopCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20">
+                  <ArrowUp className="h-4 w-4 mr-2" /> Stop Camera
+                </Button>
+              )}
+            </div>
           </div>
           <Card className="bg-gray-900 border-orange-900/20">
             <CardHeader>
               <CardTitle className="text-white">Live QR Scanner</CardTitle>
               <CardDescription className="text-gray-400">
                 {scannedCustomer ? `Scanning for: ${scannedCustomer.name}` : "Click 'Start Camera' to scan QR"}
+                {availableCameras.length > 1 && " - Use back camera for better scanning"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="aspect-video bg-black rounded-lg border-2 border-dashed border-orange-600">
-                <video ref={videoRef} className="w-full h-full object-cover rounded-lg" />
+              <div className="aspect-video bg-black rounded-lg border-2 border-dashed border-orange-600 relative">
+                <video 
+                  ref={videoRef} 
+                  className="w-full h-full object-cover rounded-lg"
+                  style={{ transform: facingMode === "user" ? 'scaleX(-1)' : 'none' }}
+                />
+                {!cameraActive && (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                    <Camera className="h-16 w-16 opacity-50" />
+                  </div>
+                )}
               </div>
               <canvas ref={canvasRef} width={640} height={480} className="hidden"></canvas>
-              {!cameraActive && (
-                <Button onClick={startCamera} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <Camera className="h-4 w-4 mr-1" /> Start Camera
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {!cameraActive && (
+                  <Button onClick={() => startCamera("environment")} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Camera className="h-4 w-4 mr-1" /> Start Camera
+                  </Button>
+                )}
+              </div>
               {scannedCustomer && (
                 <Card className="bg-gray-900 border-orange-900/20 mt-4">
                   <CardHeader>
@@ -296,19 +465,19 @@ useEffect(() => {
             </CardContent>
           </Card>
         </section>
-        <footer className="mt-10 p-6 bg-gray-900 border-t border-orange-900/20 rounded-lg">
-  <h3 className="text-xl font-bold text-white mb-4">🏆 Loyalty Leaderboard</h3>
-  <div className="space-y-2 max-h-64 overflow-y-auto">
-    {leaderboard.length === 0 && <p className="text-gray-400">No loyal customers yet.</p>}
-    {leaderboard.map((user, idx) => (
-      <div key={idx} className="flex justify-between px-4 py-2 bg-black/40 rounded-md border border-orange-800">
-        <span className="text-white font-medium">{idx + 1}. {user.name}</span>
-        <span className="text-orange-400 font-bold">{user.point} pts</span>
-      </div>
-    ))}
-  </div>
-</footer>
 
+        <footer className="mt-10 p-6 bg-gray-900 border-t border-orange-900/20 rounded-lg">
+          <h3 className="text-xl font-bold text-white mb-4">🏆 Loyalty Leaderboard</h3>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {leaderboard.length === 0 && <p className="text-gray-400">No loyal customers yet.</p>}
+            {leaderboard.map((user, idx) => (
+              <div key={idx} className="flex justify-between px-4 py-2 bg-black/40 rounded-md border border-orange-800">
+                <span className="text-white font-medium">{idx + 1}. {user.name}</span>
+                <span className="text-orange-400 font-bold">{user.point} pts</span>
+              </div>
+            ))}
+          </div>
+        </footer>
       </main>
     </div>
   )
