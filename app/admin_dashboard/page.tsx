@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
-import { Calendar, QrCode, Scissors, LogOut, User, Check, Clock, Star, ArrowUp, Camera, X, RotateCcw } from "lucide-react"
+import { Calendar, QrCode, Scissors, LogOut, User, Check, Clock, Star, ArrowUp, Camera, X, RotateCcw, Scan } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -51,6 +51,8 @@ export default function BarberDashboard() {
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
   const [currentCameraId, setCurrentCameraId] = useState<string>("")
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanSuccess, setScanSuccess] = useState(false)
 
   const scannerRef = useRef<HTMLElement>(null)
   const bookingsRef = useRef<HTMLElement>(null)
@@ -91,77 +93,33 @@ export default function BarberDashboard() {
   }, []);
 
   // Fetch all bookings
-  // Fetch all bookings - CORRECTED (Use this version)
-// Fetch all bookings - UPDATED with better error handling
-const all_names = async () => {
-  const dates = dateRef.current?.value || selectedDate
-  const token = localStorage.getItem("adminToken")
+  const all_names = async () => {
+    const dates = dateRef.current?.value || selectedDate
+    const token = localStorage.getItem("adminToken")
 
-  // Check if token exists
-  if (!token) {
-    console.error("No admin token found")
-    setBookingList([])
-    return
+    try {
+      const response = await axios.post(
+        `${BACKEND_URL}/api/v1/admin/all`,
+        { date: dates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      const bookings = response.data.message.map((b: any) => ({
+        id: b._id,
+        name: b.name,
+        preferred_time: b.preferred_time,
+        preferred_date: b.preferred_date,
+        done: b.done || false,
+        isLoyal: b.isLoyal || false,
+        points: parseInt(b.points || "0"),
+        status: b.done ? "done" : "pending"
+      }))
+      setBookingList(bookings)
+    } catch (error) {
+      console.error("Booking fetch failed:", error)
+    }
   }
 
-  try {
-    const response = await axios.post(
-      `${BACKEND_URL}/api/v1/admin/all`,
-      { date: dates },
-      { 
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      }
-    )
-
-    console.log("Booking API Response:", response.data);
-
-    let bookingsArray = [];
-
-    // Handle the response based on actual structure
-    if (response.data.message === "No users yet!") {
-      // No bookings case
-      setBookingList([]);
-      return;
-    } else if (Array.isArray(response.data.message)) {
-      // Normal case - message contains array
-      bookingsArray = response.data.message;
-    } else if (Array.isArray(response.data)) {
-      // Fallback - data itself is array
-      bookingsArray = response.data;
-    } else {
-      // Unexpected format
-      console.error("Unexpected response format:", response.data);
-      setBookingList([]);
-      return;
-    }
-
-    // Transform data for frontend
-    const bookings = bookingsArray.map((b: any) => ({
-      id: b._id,
-      name: b.name,
-      preferred_time: b.preferred_time,
-      preferred_date: b.preferred_date,
-      done: b.done || false,
-      isLoyal: b.isLoyal || false,
-      points: parseInt(b.points || "0"),
-      status: b.done ? "done" : "pending"
-    }))
-
-    setBookingList(bookings)
-
-  } catch (error: any) {
-    console.error("Booking fetch failed:", error.response?.data || error.message)
-    if (error.response?.status === 401) {
-      console.error("Token expired or invalid - redirecting to login")
-      localStorage.removeItem("adminToken")
-      router.push("/admin")
-    }
-    setBookingList([])
-  }
-}
   // Handle amount submission
   const handleAmountSubmit = async () => {
     if (!pendingCustomer) return;
@@ -223,6 +181,7 @@ const all_names = async () => {
       const stream = videoRef.current.srcObject
       stream.getTracks().forEach((track: MediaStreamTrack) => track.stop())
       setCameraActive(false)
+      setIsScanning(false)
     }
   }
 
@@ -230,12 +189,17 @@ const all_names = async () => {
     try {
       stopCamera() // Stop any existing camera
 
+      // Always use back camera on mobile
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const preferredFacingMode = isMobile ? "environment" : facingMode;
+
       const constraints: MediaStreamConstraints = {
         video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: deviceId ? undefined : facingMode,
-          deviceId: deviceId ? { exact: deviceId } : undefined
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          facingMode: deviceId ? undefined : preferredFacingMode,
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          aspectRatio: { ideal: 1 } // Better for QR scanning
         }
       }
 
@@ -245,6 +209,8 @@ const all_names = async () => {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
         setCameraActive(true)
+        setIsScanning(true)
+        setScanSuccess(false)
         
         // Get the actual device ID being used
         const videoTrack = stream.getVideoTracks()[0]
@@ -257,17 +223,22 @@ const all_names = async () => {
       }
     } catch (err) {
       console.error("Camera access denied:", err)
+      setQrResult("❌ Camera access denied. Please allow camera permissions.")
       // Fallback to basic constraints if specific camera fails
       if (deviceId || facingMode !== "user") {
         try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true })
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" } 
+          })
           if (videoRef.current) {
             videoRef.current.srcObject = fallbackStream
             await videoRef.current.play()
             setCameraActive(true)
+            setIsScanning(true)
           }
         } catch (fallbackErr) {
           console.error("Fallback camera also failed:", fallbackErr)
+          setQrResult("❌ Cannot access camera. Please check permissions.")
         }
       }
     }
@@ -294,59 +265,83 @@ const all_names = async () => {
     await startCamera("environment", nextCamera.deviceId)
   }
 
-  // QR Scanner Logic
-  // QR Scanner Logic - UPDATED
-// QR Scanner Logic - UPDATED
-const scanQRCode = async () => {
-  const context = canvasRef.current?.getContext("2d", { willReadFrequently: true })
-  const video = videoRef.current
-  if (!video || !context || !canvasRef.current) return
+  // QR Scanner Logic - IMPROVED
+  const scanQRCode = async () => {
+    if (!isScanning) return;
 
-  const canvas = canvasRef.current
-  canvas.width = video.videoWidth || 640
-  canvas.height = video.videoHeight || 480
-  context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const context = canvasRef.current?.getContext("2d", { willReadFrequently: true })
+    const video = videoRef.current
+    if (!video || !context || !canvasRef.current || video.readyState !== 4) return
 
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-  const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
+    const canvas = canvasRef.current
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-  if (qrCode) {
-    const qrText = qrCode.data.trim()
-    console.log("Scanned QR Code:", qrText)
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+    const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
 
-    try {
-      const verifyRes = await axios.post(`${BACKEND_URL}/api/v1/admin/check`, { qrContent: qrText })
-      console.log("Verification response:", verifyRes.data)
+    if (qrCode) {
+      const qrText = qrCode.data.trim()
+      console.log("Scanned QR Code:", qrText)
 
-      if (verifyRes.data.valid && verifyRes.data.customer) {
-        const customer = verifyRes.data.customer
-        console.log("Customer found:", customer)
-        setPendingCustomer(customer)
-        setShowAmountCard(true)
-        stopCamera()
-        setQrResult("") // Clear any previous error messages
-      } else {
-        console.log("Invalid QR code or customer not found")
-        setQrResult("❌ " + (verifyRes.data.message || "Invalid QR code or customer not found"))
-      }
-    } catch (err: any) {
-      console.error("QR verification failed:", err.response?.data || err.message)
-      if (err.response?.status === 404) {
-        setQrResult("❌ " + (err.response.data.message || "Customer not found in database"))
-      } else if (err.response?.status === 400) {
-        setQrResult("❌ " + (err.response.data.error || "Invalid QR code format"))
-      } else {
-        setQrResult("❌ QR verification failed")
+      // Visual feedback
+      setScanSuccess(true)
+      setIsScanning(false)
+
+      try {
+        const verifyRes = await axios.post(`${BACKEND_URL}/api/v1/admin/check`, { qrContent: qrText })
+        console.log("Verification response:", verifyRes.data)
+
+        if (verifyRes.data.valid && verifyRes.data.customer) {
+          const customer = verifyRes.data.customer
+          console.log("Customer found:", customer)
+          
+          // Set pending customer to show amount input card
+          setPendingCustomer(customer)
+          setShowAmountCard(true)
+          setQrResult("") // Clear any previous errors
+          stopCamera()
+        } else {
+          console.log("Invalid QR code")
+          setQrResult("❌ " + (verifyRes.data.message || "Invalid QR code"))
+          setTimeout(() => {
+            setQrResult("")
+            setIsScanning(true) // Resume scanning
+            setScanSuccess(false)
+          }, 2000)
+        }
+      } catch (err: any) {
+        console.error("QR verification failed:", err)
+        if (err.response?.status === 404) {
+          setQrResult("❌ Customer not found in database")
+        } else if (err.response?.status === 400) {
+          setQrResult("❌ Invalid QR code format")
+        } else {
+          setQrResult("❌ QR verification failed - Server error")
+        }
+        setTimeout(() => {
+          setQrResult("")
+          setIsScanning(true) // Resume scanning
+          setScanSuccess(false)
+        }, 2000)
       }
     }
-    stopCamera()
   }
-}
+
   useEffect(() => {
     let interval: any
-    if (cameraActive) interval = setInterval(scanQRCode, 1000)
+    if (cameraActive && isScanning) {
+      interval = setInterval(scanQRCode, 500) // Faster scanning on mobile
+    }
     return () => clearInterval(interval)
-  }, [cameraActive])
+  }, [cameraActive, isScanning])
+
+  // Clear scanned customer
+  const clearScannedCustomer = () => {
+    setScannedCustomer(null);
+    setQrResult("");
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -384,7 +379,7 @@ const scanQRCode = async () => {
       </header>
 
       {/* Main Content */}
-      <main className="space-y-8 p-6">
+      <main className="space-y-8 p-4 md:p-6">
         {/* Amount Input Card Modal */}
         {showAmountCard && pendingCustomer && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -447,74 +442,188 @@ const scanQRCode = async () => {
 
         <section ref={scannerRef} className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-white">QR Scanner</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-white">QR Scanner</h2>
             <div className="flex gap-2">
               {cameraActive && availableCameras.length > 1 && (
-                <Button onClick={switchCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20">
+                <Button onClick={switchCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20 hidden md:flex">
                   <RotateCcw className="h-4 w-4 mr-2" /> Switch Camera
                 </Button>
               )}
               {cameraActive && (
                 <Button onClick={stopCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20">
-                  <ArrowUp className="h-4 w-4 mr-2" /> Stop Camera
+                  <ArrowUp className="h-4 w-4 mr-2" /> Stop
                 </Button>
               )}
             </div>
           </div>
           <Card className="bg-gray-900 border-orange-900/20">
             <CardHeader>
-              <CardTitle className="text-white">Live QR Scanner</CardTitle>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Scan className="h-5 w-5" />
+                Live QR Scanner
+              </CardTitle>
               <CardDescription className="text-gray-400">
-                {scannedCustomer ? `Scanning for: ${scannedCustomer.name}` : "Click 'Start Camera' to scan QR"}
-                {availableCameras.length > 1 && " - Use back camera for better scanning"}
+                {cameraActive 
+                  ? "Point camera at QR code to scan" 
+                  : "Click 'Start Scanner' to begin scanning"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="aspect-video bg-black rounded-lg border-2 border-dashed border-orange-600 relative">
+              {/* Scanner Container with Overlay */}
+              <div className="relative bg-black rounded-lg border-2 border-dashed border-orange-600 overflow-hidden">
                 <video 
                   ref={videoRef} 
                   className="w-full h-full object-cover rounded-lg"
-                  style={{ transform: facingMode === "user" ? 'scaleX(-1)' : 'none' }}
+                  style={{ 
+                    transform: facingMode === "user" ? 'scaleX(-1)' : 'none',
+                    minHeight: '300px'
+                  }}
                 />
+                
+                {/* Scanner Overlay */}
+                {cameraActive && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Scanning Frame */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-orange-400 rounded-lg shadow-lg">
+                      {/* Corner borders */}
+                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-orange-400 rounded-tl"></div>
+                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-orange-400 rounded-tr"></div>
+                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-orange-400 rounded-bl"></div>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-orange-400 rounded-br"></div>
+                      
+                      {/* Scanning Animation */}
+                      {isScanning && (
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-orange-400 animate-pulse shadow-lg shadow-orange-400/50"></div>
+                      )}
+                    </div>
+                    
+                    {/* Success Animation */}
+                    {scanSuccess && (
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center animate-ping">
+                          <Check className="h-8 w-8 text-white" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Instructions */}
+                    <div className="absolute bottom-4 left-0 right-0 text-center">
+                      <p className="text-white bg-black/50 px-3 py-1 rounded-full text-sm inline-block">
+                        📱 Position QR code within frame
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Placeholder when camera is off */}
                 {!cameraActive && (
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <Camera className="h-16 w-16 opacity-50" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 p-4">
+                    <div className="w-24 h-24 bg-orange-900/20 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-orange-600/50">
+                      <Camera className="h-12 w-12 opacity-50" />
+                    </div>
+                    <p className="text-center text-lg mb-2">QR Code Scanner</p>
+                    <p className="text-center text-sm text-gray-500 mb-4">
+                      Scan customer QR codes to add loyalty points
+                    </p>
                   </div>
                 )}
               </div>
+              
               <canvas ref={canvasRef} width={640} height={480} className="hidden"></canvas>
-              <div className="flex gap-2">
-                {!cameraActive && (
-                  <Button onClick={() => startCamera("environment")} className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Camera className="h-4 w-4 mr-1" /> Start Camera
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                {!cameraActive ? (
+                  <Button 
+                    onClick={() => startCamera("environment")} 
+                    className="bg-orange-600 hover:bg-orange-700 text-white py-3 text-base"
+                    size="lg"
+                  >
+                    <Camera className="h-5 w-5 mr-2" /> Start Scanner
                   </Button>
+                ) : (
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      onClick={() => setIsScanning(!isScanning)} 
+                      variant={isScanning ? "default" : "outline"}
+                      className={isScanning 
+                        ? "bg-green-600 hover:bg-green-700 text-white flex-1" 
+                        : "border-orange-600 text-orange-400 hover:bg-orange-900/20 flex-1"
+                      }
+                    >
+                      {isScanning ? (
+                        <>
+                          <Scan className="h-4 w-4 mr-2 animate-pulse" />
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Scan className="h-4 w-4 mr-2" />
+                          Resume Scan
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 )}
               </div>
+              
+              {/* Results */}
               {scannedCustomer && (
-                <Card className="bg-gray-900 border-orange-900/20 mt-4">
-                  <CardHeader>
-                    <CardTitle className="text-orange-400 text-lg font-bold">Points Added!</CardTitle>
-                    <CardDescription className="text-gray-400">Customer scanned successfully</CardDescription>
+                <Card className="bg-gray-900 border-green-900/20 mt-4 animate-in fade-in duration-500">
+                  <CardHeader className="flex flex-row items-center justify-between pb-3">
+                    <div>
+                      <CardTitle className="text-green-400 text-lg font-bold">Points Added!</CardTitle>
+                      <CardDescription className="text-gray-400">Customer scanned successfully</CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearScannedCustomer}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarFallback>{scannedCustomer.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="bg-green-600 text-white">
+                          {scannedCustomer.name.charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-white font-semibold">{scannedCustomer.name}</p>
                         <p className="text-green-400 font-medium">Total Points: {scannedCustomer.points}</p>
+                        <p className="text-gray-400 text-sm">Phone: {scannedCustomer.phone}</p>
                       </div>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <Badge variant="outline" className="border-green-600 text-green-400">
                         Status: Done
                       </Badge>
+                      <Button 
+                        variant="outline" 
+                        className="border-orange-600 text-orange-400 hover:bg-orange-900/20"
+                        onClick={() => {
+                          clearScannedCustomer();
+                          startCamera("environment");
+                        }}
+                      >
+                        Scan Another
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               )}
-              {qrResult && <p className="text-center text-orange-400 mt-4">{qrResult}</p>}
+              
+              {qrResult && (
+                <div className={`p-4 rounded-lg text-center animate-in fade-in duration-300 ${
+                  qrResult.includes('✅') 
+                    ? 'bg-green-900/20 border border-green-600/30 text-green-400' 
+                    : 'bg-red-900/20 border border-red-600/30 text-red-400'
+                }`}>
+                  <p className="font-medium">{qrResult}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>

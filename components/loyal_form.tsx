@@ -37,9 +37,10 @@ export default function Loyal_Form() {
   };
 
   const loyalty = async () => {
-    const name = nameRef.current?.value;
-    const email = emailRef.current?.value;
-    const phone = phoneRef.current?.value;
+    // Trim whitespace from all fields before submitting
+    const name = nameRef.current?.value?.trim();
+    const email = emailRef.current?.value?.trim();
+    const phone = phoneRef.current?.value?.trim();
 
     if (!name || !email || !phone) {
       alert("Please fill in all the fields.");

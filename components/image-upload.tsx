@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Star, Upload, X, ImageIcon, Video } from "lucide-react"
+import { Star, Upload, X, ImageIcon, Video, ExternalLink } from "lucide-react"
 import Tesseract from "tesseract.js"
 import { BACKEND_URL } from "@/components/config"
 
@@ -70,6 +70,12 @@ export function ReviewProofUpload({
     setReviewStatus(null)
   }
 
+  const openGoogleMaps = () => {
+    // Replace with your actual Google Maps business URL
+    const googleMapsUrl = "https://www.google.com/maps/place/Samir's+Salon/@19.2269567,72.9705119,17z/data=!3m1!4b1!4m6!3m5!1s0x3be7b93c3a68f265:0x742c8b465e03bdd3!8m2!3d19.2269567!4d72.9705119!16s%2Fg%2F11s0xxgrnq?entry=ttu&g_ep=EgoyMDI1MTAwNC4wIKXMDSoASAFQAw%3D%3D"
+    window.open(googleMapsUrl, "_blank")
+  }
+
   const handleSubmit = async () => {
     if (!selectedFile) return
     setIsUploading(true)
@@ -83,16 +89,29 @@ export function ReviewProofUpload({
       console.log("Extracted OCR Text:\n", extractedText)
 
       const keywords = [
-        "barber",
-        "haircut",
-        "salon",
-        "honeybliss",
-        "downtown la barber",
-        "cut",
+        "samir",
+        "samir's salon",
+        "Samir",
+        "समीर'स सालों",
+        "beauty parlour",
+        "hair salon",
+        "highlights",
+        "botox",
         "trim",
-        "fade",
+        "makeover",
         "style",
-      ]
+        "customer care",
+        "VARDHAN TEST TUBE CENTRE",
+        "Thane",
+        "Maharashtra",
+        "Emerald Plaza",
+        "Pokharan Rd",
+        "077384 66566",
+        "6XGC+Q6",
+        "Hiranandani Meadows",
+        "salon",
+        "समीर"
+      ];
 
       const matched = keywords.some((word) =>
         includesWithTolerance(extractedText, word, 1)
@@ -114,7 +133,7 @@ export function ReviewProofUpload({
         if (res.ok) {
           setReviewStatus({
             success: true,
-            message: "✅ Review verified! 200 points added.",
+            message: "✅ Review verified! 50 points added.",
           })
           onProofSubmitted()
         } else {
@@ -126,7 +145,7 @@ export function ReviewProofUpload({
       } else {
         setReviewStatus({
           success: false,
-          message: "❌ Review doesn't clearly mention the barber shop.",
+          message: "❌ Review doesn't clearly mention our salon. Please make sure your review mentions 'Samir Salon' or related keywords.",
         })
       }
     } catch (error) {
@@ -161,10 +180,19 @@ export function ReviewProofUpload({
             </div>
           </div>
 
-          <h3 className="font-semibold text-white mb-2">Submit Google Review Proof for 5% Off</h3>
+          <h3 className="font-semibold text-white mb-2">Submit Google Review for 50 Bonus Points!</h3>
           <p className="text-gray-300 text-sm mb-4">
-            Upload a screenshot or video of your Google review to claim your discount!
+            Leave a review on Google Maps and upload screenshot to claim your bonus points!
           </p>
+
+          {/* Google Maps Button */}
+          <Button 
+            onClick={openGoogleMaps}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-4"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open Google Maps to Leave Review
+          </Button>
 
           {!selectedFile ? (
             <div className="border-2 border-dashed border-orange-500/30 rounded-lg p-6 bg-black/20 hover:bg-black/30 transition-colors">
@@ -179,12 +207,9 @@ export function ReviewProofUpload({
                 <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center">
                   <Upload className="w-8 h-8 text-orange-500" />
                 </div>
-                <div className="text-white font-medium">Click to upload proof</div>
-                <p className="text-gray-400 text-sm">PNG, JPG, MP4 up to 10MB</p>
+                <div className="text-white font-medium">Upload Review Screenshot</div>
+                <p className="text-gray-400 text-sm">PNG, JPG up to 10MB</p>
               </label>
-              <Button className="w-full bg-orange-500 mt-3 text-black hover:bg-orange-600">
-                Google Maps
-              </Button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -233,12 +258,12 @@ export function ReviewProofUpload({
                 {isUploading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mr-2" />
-                    Submitting...
+                    Verifying Review...
                   </>
                 ) : (
                   <>
                     <Star className="h-4 w-4 mr-2" />
-                    Submit Review Proof
+                    Submit Review Proof for 50 Points
                   </>
                 )}
               </Button>
@@ -256,10 +281,10 @@ export function ReviewProofUpload({
           )}
 
           <div className="text-xs text-gray-400 space-y-1 pt-4">
-            <p>💡 <strong>Tips for best results:</strong></p>
-            <p>• Include your name in the screenshot</p>
-            <p>• Ensure the review text is visible</p>
-            <p>• Mention 'barber', 'haircut', or shop name in review</p>
+            <p>💡 <strong>Tips for successful verification:</strong></p>
+            <p>• Make sure your review mentions "Samir Salon" or related keywords</p>
+            <p>• Include the star rating in your screenshot</p>
+            <p>• Ensure the review text is clear and readable</p>
           </div>
         </div>
       </CardContent>

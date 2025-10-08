@@ -82,7 +82,7 @@ export default function Component() {
             </div>
             <div className="flex items-center gap-3">
               <MapPin className="h-4 w-4 text-orange-500" />
-              <span className="text-gray-300">Downtown LA Barber</span>
+              <span className="text-gray-300">Thane , Maharashtra </span>
             </div>
           </CardContent>
         </Card>
@@ -122,7 +122,7 @@ export default function Component() {
 
               <div className="text-center p-4 bg-black/40 rounded-xl border border-orange-500/20">
                 <p className="text-white font-medium">
-                  🎁 You'll receive a free haircut or hair product after 1000 points.
+                  🎁 You'll receive a free hairservice after 1000 points.
                 </p>
               </div>
             </div>
