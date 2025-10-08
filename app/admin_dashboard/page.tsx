@@ -91,33 +91,77 @@ export default function BarberDashboard() {
   }, []);
 
   // Fetch all bookings
-  const all_names = async () => {
-    const dates = dateRef.current?.value || selectedDate
-    const token = localStorage.getItem("adminToken")
+  // Fetch all bookings - CORRECTED (Use this version)
+// Fetch all bookings - UPDATED with better error handling
+const all_names = async () => {
+  const dates = dateRef.current?.value || selectedDate
+  const token = localStorage.getItem("adminToken")
 
-    try {
-      const response = await axios.post(
-        `${BACKEND_URL}/api/v1/admin/all`,
-        { date: dates },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-
-      const bookings = response.data.message.map((b: any) => ({
-        id: b._id,
-        name: b.name,
-        preferred_time: b.preferred_time,
-        preferred_date: b.preferred_date,
-        done: b.done || false,
-        isLoyal: b.isLoyal || false,
-        points: parseInt(b.points || "0"),
-        status: b.done ? "done" : "pending"
-      }))
-      setBookingList(bookings)
-    } catch (error) {
-      console.error("Booking fetch failed:", error)
-    }
+  // Check if token exists
+  if (!token) {
+    console.error("No admin token found")
+    setBookingList([])
+    return
   }
 
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/all`,
+      { date: dates },
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      }
+    )
+
+    console.log("Booking API Response:", response.data);
+
+    let bookingsArray = [];
+
+    // Handle the response based on actual structure
+    if (response.data.message === "No users yet!") {
+      // No bookings case
+      setBookingList([]);
+      return;
+    } else if (Array.isArray(response.data.message)) {
+      // Normal case - message contains array
+      bookingsArray = response.data.message;
+    } else if (Array.isArray(response.data)) {
+      // Fallback - data itself is array
+      bookingsArray = response.data;
+    } else {
+      // Unexpected format
+      console.error("Unexpected response format:", response.data);
+      setBookingList([]);
+      return;
+    }
+
+    // Transform data for frontend
+    const bookings = bookingsArray.map((b: any) => ({
+      id: b._id,
+      name: b.name,
+      preferred_time: b.preferred_time,
+      preferred_date: b.preferred_date,
+      done: b.done || false,
+      isLoyal: b.isLoyal || false,
+      points: parseInt(b.points || "0"),
+      status: b.done ? "done" : "pending"
+    }))
+
+    setBookingList(bookings)
+
+  } catch (error: any) {
+    console.error("Booking fetch failed:", error.response?.data || error.message)
+    if (error.response?.status === 401) {
+      console.error("Token expired or invalid - redirecting to login")
+      localStorage.removeItem("adminToken")
+      router.push("/admin")
+    }
+    setBookingList([])
+  }
+}
   // Handle amount submission
   const handleAmountSubmit = async () => {
     if (!pendingCustomer) return;
@@ -251,44 +295,53 @@ export default function BarberDashboard() {
   }
 
   // QR Scanner Logic
-  const scanQRCode = async () => {
-    const context = canvasRef.current?.getContext("2d", { willReadFrequently: true })
-    const video = videoRef.current
-    if (!video || !context || !canvasRef.current) return
+  // QR Scanner Logic - UPDATED
+// QR Scanner Logic - UPDATED
+const scanQRCode = async () => {
+  const context = canvasRef.current?.getContext("2d", { willReadFrequently: true })
+  const video = videoRef.current
+  if (!video || !context || !canvasRef.current) return
 
-    const canvas = canvasRef.current
-    canvas.width = video.videoWidth || 640
-    canvas.height = video.videoHeight || 480
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+  const canvas = canvasRef.current
+  canvas.width = video.videoWidth || 640
+  canvas.height = video.videoHeight || 480
+  context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+  const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
 
-    if (qrCode) {
-      const qrText = qrCode.data.trim()
-      console.log("Scanned QR Code:", qrText)
+  if (qrCode) {
+    const qrText = qrCode.data.trim()
+    console.log("Scanned QR Code:", qrText)
 
-      try {
-        const verifyRes = await axios.post(`${BACKEND_URL}/api/v1/admin/check`, { qrContent: qrText })
-        console.log("Verification response:", verifyRes.data)
+    try {
+      const verifyRes = await axios.post(`${BACKEND_URL}/api/v1/admin/check`, { qrContent: qrText })
+      console.log("Verification response:", verifyRes.data)
 
-        if (verifyRes.data.user) {
-          const customer = verifyRes.data.user
-          setPendingCustomer(customer)
-          setShowAmountCard(true)
-          stopCamera()
-
-        } else {
-          setQrResult("❌ Invalid QR code or customer not found")
-        }
-      } catch (err) {
-        console.error("QR verification failed", err)
-        setQrResult("❌ Invalid or expired QR code")
+      if (verifyRes.data.valid && verifyRes.data.customer) {
+        const customer = verifyRes.data.customer
+        console.log("Customer found:", customer)
+        setPendingCustomer(customer)
+        setShowAmountCard(true)
+        stopCamera()
+        setQrResult("") // Clear any previous error messages
+      } else {
+        console.log("Invalid QR code or customer not found")
+        setQrResult("❌ " + (verifyRes.data.message || "Invalid QR code or customer not found"))
       }
-      stopCamera()
+    } catch (err: any) {
+      console.error("QR verification failed:", err.response?.data || err.message)
+      if (err.response?.status === 404) {
+        setQrResult("❌ " + (err.response.data.message || "Customer not found in database"))
+      } else if (err.response?.status === 400) {
+        setQrResult("❌ " + (err.response.data.error || "Invalid QR code format"))
+      } else {
+        setQrResult("❌ QR verification failed")
+      }
     }
+    stopCamera()
   }
-
+}
   useEffect(() => {
     let interval: any
     if (cameraActive) interval = setInterval(scanQRCode, 1000)
