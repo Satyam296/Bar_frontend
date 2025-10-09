@@ -178,31 +178,32 @@ export default function Home() {
 
       {/* About Us Section */}
       <section ref={aboutRef} className="py-20 px-4">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-serif mb-8">About Us</h2>
-            <p className="text-lg text-gray-300 leading-relaxed">
-              Welcome to <span className="text-amber-500 font-semibold">Samir's Salon</span> — where artistry meets precision. 
-              For more than over three decade, we've been redefining grooming and styling experiences with a perfect blend 
-              of modern trends and timeless techniques.
-            </p>
-            <p className="text-lg text-gray-300 leading-relaxed mt-4">
-              Our team of experts ensures every client leaves feeling confident and refreshed. 
-              Whether it's a signature haircut, hair treatment, or personalized styling session, 
-              we are committed to delivering excellence with every visit.
-            </p>
-          </div>
+  <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+    <div>
+      <h2 className="text-4xl md:text-5xl font-serif mb-8">About Us</h2>
+      <p className="text-lg text-gray-300 leading-relaxed">
+        Welcome to <span className="text-amber-500 font-semibold">Samir's Salon</span> — where artistry meets precision. 
+        For over three decades, we've been redefining beauty and grooming experiences with a perfect blend 
+        of modern trends and timeless techniques.
+      </p>
+      <p className="text-lg text-gray-300 leading-relaxed mt-4">
+        Along with expert salon services, we also provide professional training in hair styling, 
+        makeup, and nail art. Our team ensures every client and trainee leaves confident, skilled, 
+        and refreshed — committed to excellence with every experience.
+      </p>
+    </div>
 
-          <div className="relative h-80 md:h-96">
-            <Image
-              src="/photos/door_open.png"
-              alt="Samir's Salon Front"
-              fill
-              className="object-cover rounded-md"
-            />
-          </div>
-        </div>
-      </section>
+    <div className="relative h-80 md:h-96">
+      <Image
+        src="/photos/door_open.png"
+        alt="Samir's Salon Front"
+        fill
+        className="object-cover rounded-md"
+      />
+    </div>
+  </div>
+</section>
+
 
       {/* Floating Action Buttons */}
       {showStickyButton && (
@@ -295,75 +296,79 @@ export default function Home() {
           </a>
         </div>
       )}
+{/* Our Founder Section */}
+<section className="py-20 px-4 bg-zinc-900">
+  <div className="max-w-6xl mx-auto">
+    <h2 className="text-4xl md:text-5xl font-serif mb-3 text-center text-white">
+      Meet Our Founder
+    </h2>
+    <p className="text-center text-gray-400 mb-16 text-lg">
+      A legacy of style and care
+    </p>
 
-      {/* Our Barbers Section */}
-      <section className="py-20 px-4 bg-zinc-900">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-serif mb-3 text-center text-white">
-            Meet Our Founder
-          </h2>
-          <p className="text-center text-gray-400 mb-16 text-lg">
-            A legacy of style and care
-          </p>
-
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-5 gap-8 items-center bg-zinc-800 p-8 md:p-10 rounded-xl shadow-lg">
-              {/* Stylist Image */}
-              <div className="md:col-span-2 flex justify-center">
-                <div className="w-56 h-56 md:w-64 md:h-64">
-                  <img
-                    src="/photos/samir_sir.png"
-                    alt="Samir - Founder"
-                    className="w-full h-full object-cover rounded-full border-4 border-amber-600"
-                    style={{ objectPosition: 'center 20%' }}
-                  />
-                </div>
-              </div>
-
-              {/* Stylist Info */}
-              <div className="md:col-span-3 text-center md:text-left">
-                <h3 className="text-4xl md:text-5xl font-serif mb-2 text-white">Samir</h3>
-                <p className="text-amber-400 text-xl mb-6">Founder & Master Hair Stylist</p>
-
-                <p className="text-gray-300 leading-relaxed mb-6">
-                  With over 30 years of experience in the salon and haircare industry, Samir was a
-                  former Director and Head of Operations at the renowned <span className="text-amber-400 font-medium">JUICE SALON</span>.  
-                  He now brings his passion, artistry, and dedication to <span className="text-amber-400 font-medium">Samir's Salon</span>,
-                  offering clients a warm, personalized, and professional experience.
-                </p>
-
-                <div className="mb-6">
-                  <h4 className="text-white font-semibold mb-3">Specialties</h4>
-                  <ul className="space-y-2 text-gray-300">
-                    <li className="flex items-start">
-                      <span className="text-amber-400 mr-2">•</span>Advanced Haircuts & Styling
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-amber-400 mr-2">•</span>Hair Coloring & Highlights
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-amber-400 mr-2">•</span>Keratin & Hair Treatments
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-amber-400 mr-2">•</span>Bridal & Event Grooming
-                    </li>
-                  </ul>
-                </div>
-
-                <button
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300"
-                  onClick={() =>
-                    (window.location.href =
-                      'https://dingg.app/booking/samirs-salon-hiranandani-mehdows')
-                  }
-                >
-                  Book with Samir
-                </button>
-              </div>
-            </div>
+    <div className="max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-5 gap-8 items-center bg-zinc-800 p-8 md:p-10 rounded-xl shadow-lg">
+        {/* Stylist Image */}
+        <div className="md:col-span-2 flex justify-center">
+          <div className="w-56 h-56 md:w-64 md:h-64">
+            <img
+              src="/photos/samir_sir.png"
+              alt="Mustaqeem Y. Sahani (Samir) - Founder"
+              className="w-full h-full object-cover rounded-full border-4 border-amber-600"
+              style={{ objectPosition: 'center 20%' }}
+            />
           </div>
         </div>
-      </section>
+
+        {/* Stylist Info */}
+        <div className="md:col-span-3 text-center md:text-left">
+          <h3 className="text-4xl md:text-5xl font-serif mb-2 text-white">
+            Mustaqeem Y. Sahani (Samir)
+          </h3>
+          <p className="text-amber-400 text-xl mb-6">Founder & Master Hair Stylist</p>
+
+          <p className="text-gray-300 leading-relaxed mb-6">
+            With over 30 years of experience in the salon and haircare industry, Mustaqeem Y. Sahani 
+            (widely known as Samir) was a former Director and Head of Operations at the renowned 
+            <span className="text-amber-400 font-medium"> JUICE SALON</span>. He has worked with numerous 
+            celebrities and now brings his passion, artistry, and dedication to 
+            <span className="text-amber-400 font-medium"> Samir's Salon</span>, offering clients a warm, 
+            personalized, and professional experience.
+          </p>
+
+          <div className="mb-6">
+            <h4 className="text-white font-semibold mb-3">Specialties</h4>
+            <ul className="space-y-2 text-gray-300">
+              <li className="flex items-start">
+                <span className="text-amber-400 mr-2">•</span>Advanced Haircuts & Styling
+              </li>
+              <li className="flex items-start">
+                <span className="text-amber-400 mr-2">•</span>Hair Coloring & Highlights
+              </li>
+              <li className="flex items-start">
+                <span className="text-amber-400 mr-2">•</span>Keratin & Hair Botox Treatments
+              </li>
+              <li className="flex items-start">
+                <span className="text-amber-400 mr-2">•</span>Bridal & Event Grooming
+              </li>
+            </ul>
+          </div>
+
+          <button
+            className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300"
+            onClick={() =>
+              (window.location.href =
+                'https://dingg.app/booking/samirs-salon-hiranandani-mehdows')
+            }
+          >
+            Book with Samir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 
       {/* Services Section */}
       <section className="py-20 px-4">
@@ -489,7 +494,7 @@ export default function Home() {
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
                   3
                 </span>
-                <span>Leave a Google review and get +200 bonus points</span>
+                <span>Leave a Google review and get +50 bonus points</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
