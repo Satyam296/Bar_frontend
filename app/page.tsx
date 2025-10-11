@@ -504,7 +504,7 @@ export default function Home() {
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
                   3
                 </span>
-                <span>Leave a Google review and get +50 bonus points</span>
+                <span>Leave a Google review and get +500 bonus points</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="bg-white text-amber-800 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">

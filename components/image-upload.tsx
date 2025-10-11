@@ -1,5 +1,4 @@
 "use client"
-
 import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -263,7 +262,7 @@ export function ReviewProofUpload({
                 ) : (
                   <>
                     <Star className="h-4 w-4 mr-2" />
-                    Submit Review Proof for 50 Points
+                    Submit Review Proof for 500 Points
                   </>
                 )}
               </Button>
