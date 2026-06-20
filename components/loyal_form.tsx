@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Crown, Star, Gift, Scissors, X } from "lucide-react"
+import { Crown, Star, Gift, Scissors, X, Share2, ArrowRight, CheckCircle } from "lucide-react"
 import {BACKEND_URL} from "@/components/config" ; 
 import axios from "axios" ;
 
@@ -16,6 +16,7 @@ export default function Loyal_Form() {
   const phoneRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  const [signupSuccess, setSignupSuccess] = useState(false)
   const [formData, setFormData] = useState({
     fullName: "",
     phoneNumber: "",
@@ -56,17 +57,59 @@ export default function Loyal_Form() {
       localStorage.setItem("token", token);
       localStorage.setItem("qrToken", qrToken);
       localStorage.setItem("points", points);
-      router.push("/dashboard");
+      setSignupSuccess(true);
     } catch (error) {
-      console.error("Booking failed:", error);
+      alert("Something went wrong. Please try again.");
     }
+  }
+
+  if (signupSuccess) {
+    return (
+      <div className="min-h-screen bg-black/95 flex items-center justify-center p-3 sm:p-4">
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
+        <Card className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-br from-zinc-900 via-black to-amber-900/10 border border-amber-700/30 shadow-2xl rounded-xl overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+          <CardContent className="p-6 sm:p-8 space-y-6 text-center">
+            <div className="flex justify-center">
+              <div className="bg-green-500/20 rounded-full p-4 border border-green-500/30">
+                <CheckCircle className="h-10 w-10 text-green-400" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-serif font-bold text-white mb-2">Welcome to the Family!</h2>
+              <p className="text-amber-300 text-sm">You've earned 150 bonus points</p>
+            </div>
+            <div className="space-y-3">
+              <Button
+                onClick={() => {
+                  const msg = `I just joined Samir's Salon loyalty program and got 150 bonus points! Join here and earn rewards every visit: https://samirsalon.in`
+                  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank")
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share on WhatsApp
+              </Button>
+              <Button
+                onClick={() => router.push("/dashboard")}
+                variant="outline"
+                className="w-full border-amber-700/40 text-amber-200 hover:bg-amber-900/20 py-3"
+              >
+                Go to Dashboard
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-black/95 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
-      
+
       {/* Main Card */}
       <Card className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-br from-zinc-900 via-black to-amber-900/10 border border-amber-700/30 shadow-2xl rounded-xl overflow-hidden">
         {/* Top Gradient Border */}
