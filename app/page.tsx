@@ -792,7 +792,7 @@ export default function Home() {
       {loyal_form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div ref={loyalFormRef}>
-            <Loyal_Form />
+            <Loyal_Form onClose={() => setloyalform(false)} />
           </div>
         </div>
       )}

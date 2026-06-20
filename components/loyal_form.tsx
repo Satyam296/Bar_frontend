@@ -10,7 +10,7 @@ import { Crown, Star, Gift, Scissors, X, Share2, ArrowRight, CheckCircle } from 
 import {BACKEND_URL} from "@/components/config" ; 
 import axios from "axios" ;
 
-export default function Loyal_Form() {
+export default function Loyal_Form({ onClose }: { onClose?: () => void }) {
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -114,6 +114,14 @@ export default function Loyal_Form() {
       <Card className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-br from-zinc-900 via-black to-amber-900/10 border border-amber-700/30 shadow-2xl rounded-xl overflow-hidden">
         {/* Top Gradient Border */}
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 text-amber-200/80 hover:text-white transition-all duration-200 z-10 p-2 rounded-lg hover:bg-amber-800/30"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
         
         <CardHeader className="text-center space-y-3 sm:space-y-4 pb-4 sm:pb-6 pt-6 sm:pt-8">
           {/* Icon */}
