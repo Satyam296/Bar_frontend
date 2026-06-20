@@ -126,7 +126,10 @@ export default function Component() {
 
               <div className="text-center p-4 bg-black/40 rounded-xl border border-orange-500/20">
                 <p className="text-white font-medium">
-                  You have ₹{details.name.point} discount available on your next service!
+                  {parseInt(details.name.point) >= 1000
+                    ? `You have ₹${details.name.point} discount available on your next service!`
+                    : `Collect 1000 points to unlock discounts — you need ${1000 - parseInt(details.name.point)} more!`
+                  }
                 </p>
               </div>
             </div>
