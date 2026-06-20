@@ -1,5 +1,5 @@
 "use client"
-import { Download, Calendar, MapPin, Phone, User } from "lucide-react"
+import { Download, Calendar, MapPin, Phone, User, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import dynamic from "next/dynamic"
@@ -54,8 +54,7 @@ export default function Component() {
     )
   }
 
-  console.log(details.name) ;
-  const currentPoints = details.name.point || 0 ; 
+  const currentPoints = details.name.point || 0 ;
   const loyaltyProgress = Math.min((currentPoints / 1000) * 100, 100) ;
 
 
@@ -104,7 +103,16 @@ export default function Component() {
             <div className="w-full aspect-square bg-white rounded-xl border border-orange-500/20 overflow-hidden flex items-center justify-center p-6">
               <QRCode value={details.name.data} size={256} />
             </div>
-            
+            <Button
+              onClick={() => {
+                const msg = `Hey! Here's my Samir's Salon loyalty QR code. Show this at the salon to earn points every visit: https://samirsalon.in/dashboard`
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank")
+              }}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              Share QR via WhatsApp
+            </Button>
           </CardContent>
         </Card>
 

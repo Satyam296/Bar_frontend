@@ -81,11 +81,10 @@ export function ReviewProofUpload({
 
     try {
       const { data } = await Tesseract.recognize(selectedFile, "eng", {
-        logger: (m) => console.log(m),
+        logger: () => {},
       })
 
       const extractedText = data.text.toLowerCase()
-      console.log("Extracted OCR Text:\n", extractedText)
 
       const keywords = [
         "samir",

@@ -179,7 +179,6 @@ export default function BarberDashboard() {
 
   const handleQrSuccess = async (decodedText: string) => {
     const qrText = decodedText.trim()
-    console.log("Scanned QR Code:", qrText)
 
     setScanSuccess(true)
     setIsScanning(false)

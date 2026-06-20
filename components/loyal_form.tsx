@@ -32,7 +32,6 @@ export default function Loyal_Form() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
     // Handle form submission here
   };
 
@@ -53,9 +52,10 @@ export default function Loyal_Form() {
         phone
       });
 
-      console.log("Booking Response:", response.data);
-      const token = response.data.imp;
-      localStorage.setItem("token", token)
+      const { imp: token, qrToken, points } = response.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("qrToken", qrToken);
+      localStorage.setItem("points", points);
       router.push("/dashboard");
     } catch (error) {
       console.error("Booking failed:", error);
