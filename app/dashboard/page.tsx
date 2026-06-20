@@ -20,28 +20,30 @@ export default function Component() {
   const [reviewSubmitted, setReviewSubmitted] = useState<boolean>(false)
 
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const fetchData = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/")
-        return
-      }
-
-      try {
-        const response = await axios.get(`${BACKEND_URL}/api/v1/user/loyal_name`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        setDetails(response.data)
-        setReviewSubmitted(response.data.name.reviewSubmitted || false)
-      } catch (err) {
-        console.error("Fetch failed", err)
-        router.push("/")
-      }
+  const fetchData = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      router.push("/")
+      return
     }
 
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/v1/user/loyal_name`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setDetails(response.data)
+      setReviewSubmitted(response.data.name.reviewSubmitted || false)
+    } catch (err) {
+      console.error("Fetch failed", err)
+      router.push("/")
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     fetchData()
+    const interval = setInterval(fetchData, 5000)
+    return () => clearInterval(interval)
   }, [router])
 
   if (!details || !details.name) {
