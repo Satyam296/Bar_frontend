@@ -125,7 +125,7 @@ export function ReviewProofUpload({
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ocrText: extractedText }),
+          body: JSON.stringify({}),
         })
 
         const result = await res.json()
@@ -280,11 +280,17 @@ export function ReviewProofUpload({
             </div>
           )}
 
-          <div className="text-xs text-gray-400 space-y-1 pt-4">
-            <p>💡 <strong>Tips for successful verification:</strong></p>
-            <p>• Make sure your review mentions "Samir Salon" or related keywords</p>
-            <p>• Include the star rating in your screenshot</p>
-            <p>• Ensure the review text is clear and readable</p>
+          <div className="text-xs text-gray-400 space-y-2 pt-4">
+            <p className="font-semibold text-amber-400">How to earn 500 points every visit:</p>
+            <p>• <strong>First visit?</strong> Leave a new Google review for Samir's Salon</p>
+            <p>• <strong>Already reviewed?</strong> Update your existing review with new text about your latest experience</p>
+            <p>• <strong>Or</strong> ask a friend or family member to leave their own review — screenshot their review to earn your points!</p>
+            <div className="mt-2 pt-2 border-t border-gray-700">
+              <p>Tips for successful verification:</p>
+              <p>• Review must mention "Samir Salon" or related keywords</p>
+              <p>• Screenshot must be different from your previous submissions</p>
+              <p>• Ensure the review text is clear and readable</p>
+            </div>
           </div>
         </div>
       </CardContent>

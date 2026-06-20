@@ -2,12 +2,17 @@
 import { Download, Calendar, MapPin, Phone, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ReviewProofUpload } from "../../components/image-upload"
+import dynamic from "next/dynamic"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import axios from "axios"
 import { BACKEND_URL } from "@/components/config"
 import QRCode from "react-qr-code"
+
+const ReviewProofUpload = dynamic(
+  () => import("../../components/image-upload").then(mod => ({ default: mod.ReviewProofUpload })),
+  { ssr: false, loading: () => <p className="text-gray-500 text-center py-4">Loading review section...</p> }
+)
 
 export default function Component() {
   const router = useRouter()
@@ -119,7 +124,7 @@ export default function Component() {
 
               <div className="text-center p-4 bg-black/40 rounded-xl border border-orange-500/20">
                 <p className="text-white font-medium">
-                  🎁 You'll receive a free hairservice after 1000 points.
+                  You have ₹{details.name.point} discount available on your next service!
                 </p>
               </div>
             </div>
