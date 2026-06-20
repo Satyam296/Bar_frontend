@@ -125,6 +125,7 @@ export function ReviewProofUpload({
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({ ocrText: extractedText }),
         })
 
         const result = await res.json()
@@ -132,7 +133,7 @@ export function ReviewProofUpload({
         if (res.ok) {
           setReviewStatus({
             success: true,
-            message: "✅ Review verified! 50 points added.",
+            message: "✅ Review verified! 500 points added.",
           })
           onProofSubmitted()
         } else {
@@ -179,7 +180,7 @@ export function ReviewProofUpload({
             </div>
           </div>
 
-          <h3 className="font-semibold text-white mb-2">Submit Google Review for 50 Bonus Points!</h3>
+          <h3 className="font-semibold text-white mb-2">Submit Google Review for 500 Bonus Points!</h3>
           <p className="text-gray-300 text-sm mb-4">
             Leave a review on Google Maps and upload screenshot to claim your bonus points!
           </p>

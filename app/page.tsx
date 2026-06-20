@@ -128,21 +128,8 @@ export default function Home() {
     }
   }
 
-  const handleAdminDashboard = () => {
-    router.push("/admin_dashboard")
-  }
-
   return (
     <main className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* Admin Button */}
-      <div className="fixed top-4 right-4 z-50">
-        <Button
-          onClick={handleAdminDashboard}
-          className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 text-sm rounded-sm"
-        >
-          Admin
-        </Button>
-      </div>
 
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0 overflow-hidden">

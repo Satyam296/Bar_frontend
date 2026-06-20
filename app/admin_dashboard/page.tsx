@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
-import { Calendar, QrCode, Scissors, LogOut, User, Check, Clock, Star, ArrowUp, Camera, X, RotateCcw, Scan } from "lucide-react"
+import { Calendar, QrCode, Scissors, LogOut, User, Check, Clock, Star, ArrowUp, Camera, X, Scan } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import axios from "axios"
-import jsQR from "jsqr"
+import { Html5Qrcode } from "html5-qrcode"
 import { BACKEND_URL } from "@/components/config"
 import useAdminAuth from "@/hooks/useAdminAuth"
 
@@ -48,16 +48,12 @@ export default function BarberDashboard() {
   const [showAmountCard, setShowAmountCard] = useState(false)
   const [amountInput, setAmountInput] = useState("")
   const [pendingCustomer, setPendingCustomer] = useState<any>(null)
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
-  const [currentCameraId, setCurrentCameraId] = useState<string>("")
   const [isScanning, setIsScanning] = useState(false)
   const [scanSuccess, setScanSuccess] = useState(false)
 
   const scannerRef = useRef<HTMLElement>(null)
   const bookingsRef = useRef<HTMLElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const html5QrRef = useRef<Html5Qrcode | null>(null)
   
 
   // Fetch bookings when date changes
@@ -78,7 +74,10 @@ export default function BarberDashboard() {
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await axios.get(`${BACKEND_URL}/api/v1/admin/loyalty-leaderboard`);
+      const token = localStorage.getItem("adminToken");
+      const res = await axios.get(`${BACKEND_URL}/api/v1/admin/loyalty-leaderboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setLeaderboard(res.data.leaderboard.map((user: any) => ({
         name: user.name,
         point: parseInt(user.point || 0)
@@ -134,10 +133,13 @@ export default function BarberDashboard() {
     const pointsToAdd = Math.floor(serviceAmount * 0.1)
 
     try {
-      await axios.post(`${BACKEND_URL}/api/v1/admin/add-points`, { 
+      const token = localStorage.getItem("adminToken")
+      await axios.post(`${BACKEND_URL}/api/v1/admin/add-points`, {
         userId: pendingCustomer._id,
         points: pointsToAdd,
         serviceAmount
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
       })
 
       const updatedCustomer = {
@@ -162,180 +164,95 @@ export default function BarberDashboard() {
     setPendingCustomer(null)
   }
 
-  // Get available cameras
-  const getCameras = async () => {
+  const stopCamera = async () => {
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const videoDevices = devices.filter(device => device.kind === 'videoinput')
-      setAvailableCameras(videoDevices)
-      return videoDevices
-    } catch (err) {
-      console.error("Error getting cameras:", err)
-      return []
+      if (html5QrRef.current) {
+        const state = html5QrRef.current.getState()
+        if (state === 2) await html5QrRef.current.stop()
+        html5QrRef.current.clear()
+        html5QrRef.current = null
+      }
+    } catch {}
+    setCameraActive(false)
+    setIsScanning(false)
+  }
+
+  const handleQrSuccess = async (decodedText: string) => {
+    const qrText = decodedText.trim()
+    console.log("Scanned QR Code:", qrText)
+
+    setScanSuccess(true)
+    setIsScanning(false)
+    await stopCamera()
+
+    try {
+      const token = localStorage.getItem("adminToken")
+      const verifyRes = await axios.post(`${BACKEND_URL}/api/v1/admin/check`, { qrContent: qrText }, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (verifyRes.data.valid && verifyRes.data.customer) {
+        setPendingCustomer(verifyRes.data.customer)
+        setShowAmountCard(true)
+        setQrResult("")
+      } else {
+        setQrResult("❌ " + (verifyRes.data.message || "Invalid QR code"))
+        setTimeout(() => { setQrResult(""); setScanSuccess(false) }, 2000)
+      }
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setQrResult("❌ Customer not found in database")
+      } else if (err.response?.status === 400) {
+        setQrResult("❌ Invalid QR code format")
+      } else {
+        setQrResult("❌ QR verification failed - Server error")
+      }
+      setTimeout(() => { setQrResult(""); setScanSuccess(false) }, 2000)
     }
   }
 
-  // Camera controls
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject instanceof MediaStream) {
-      const stream = videoRef.current.srcObject
-      stream.getTracks().forEach((track: MediaStreamTrack) => track.stop())
-      setCameraActive(false)
-      setIsScanning(false)
-    }
-  }
-
-  const startCamera = async (facingMode: "user" | "environment" = "environment", deviceId?: string) => {
+  const startCamera = async () => {
     try {
-      stopCamera() // Stop any existing camera
+      await stopCamera()
+      const scanner = new Html5Qrcode("qr-reader")
+      html5QrRef.current = scanner
 
-      // Always use back camera on mobile
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const preferredFacingMode = isMobile ? "environment" : facingMode;
+      await scanner.start(
+        { facingMode: "environment" },
+        { fps: 15, qrbox: undefined, aspectRatio: 1.0, disableFlip: false },
+        handleQrSuccess,
+        () => {}
+      )
 
-      const constraints: MediaStreamConstraints = {
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          facingMode: deviceId ? undefined : preferredFacingMode,
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          aspectRatio: { ideal: 1 } // Better for QR scanning
-        }
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setCameraActive(true)
-        setIsScanning(true)
-        setScanSuccess(false)
-        
-        // Get the actual device ID being used
-        const videoTrack = stream.getVideoTracks()[0]
-        if (videoTrack) {
-          setCurrentCameraId(videoTrack.getSettings().deviceId || "")
-        }
-        
-        // Update available cameras
-        await getCameras()
-      }
+      setCameraActive(true)
+      setIsScanning(true)
+      setScanSuccess(false)
     } catch (err) {
-      console.error("Camera access denied:", err)
+      console.error("Camera failed:", err)
       setQrResult("❌ Camera access denied. Please allow camera permissions.")
-      // Fallback to basic constraints if specific camera fails
-      if (deviceId || facingMode !== "user") {
-        try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-          })
-          if (videoRef.current) {
-            videoRef.current.srcObject = fallbackStream
-            await videoRef.current.play()
-            setCameraActive(true)
-            setIsScanning(true)
-          }
-        } catch (fallbackErr) {
-          console.error("Fallback camera also failed:", fallbackErr)
-          setQrResult("❌ Cannot access camera. Please check permissions.")
-        }
-      }
     }
   }
 
-  // Switch between front and back camera
-  const switchCamera = async () => {
-    const cameras = await getCameras()
-    
-    if (cameras.length <= 1) {
-      // If only one camera, toggle between user and environment
-      const newFacingMode = facingMode === "user" ? "environment" : "user"
-      setFacingMode(newFacingMode)
-      await startCamera(newFacingMode)
-      return
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const scanner = new Html5Qrcode("qr-file-reader")
+      const result = await scanner.scanFile(file, true)
+      scanner.clear()
+      await handleQrSuccess(result)
+    } catch {
+      setQrResult("❌ Could not read QR code from image. Try again with a clearer photo.")
+      setTimeout(() => setQrResult(""), 3000)
     }
 
-    // If multiple cameras, cycle through them
-    const currentIndex = cameras.findIndex(cam => cam.deviceId === currentCameraId)
-    const nextIndex = (currentIndex + 1) % cameras.length
-    const nextCamera = cameras[nextIndex]
-    
-    setCurrentCameraId(nextCamera.deviceId)
-    await startCamera("environment", nextCamera.deviceId)
-  }
-
-  // QR Scanner Logic - IMPROVED
-  const scanQRCode = async () => {
-    if (!isScanning) return;
-
-    const context = canvasRef.current?.getContext("2d", { willReadFrequently: true })
-    const video = videoRef.current
-    if (!video || !context || !canvasRef.current || video.readyState !== 4) return
-
-    const canvas = canvasRef.current
-    canvas.width = video.videoWidth || 640
-    canvas.height = video.videoHeight || 480
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
-
-    if (qrCode) {
-      const qrText = qrCode.data.trim()
-      console.log("Scanned QR Code:", qrText)
-
-      // Visual feedback
-      setScanSuccess(true)
-      setIsScanning(false)
-
-      try {
-        const verifyRes = await axios.post(`${BACKEND_URL}/api/v1/admin/check`, { qrContent: qrText })
-        console.log("Verification response:", verifyRes.data)
-
-        if (verifyRes.data.valid && verifyRes.data.customer) {
-          const customer = verifyRes.data.customer
-          console.log("Customer found:", customer)
-          
-          // Set pending customer to show amount input card
-          setPendingCustomer(customer)
-          setShowAmountCard(true)
-          setQrResult("") // Clear any previous errors
-          stopCamera()
-        } else {
-          console.log("Invalid QR code")
-          setQrResult("❌ " + (verifyRes.data.message || "Invalid QR code"))
-          setTimeout(() => {
-            setQrResult("")
-            setIsScanning(true) // Resume scanning
-            setScanSuccess(false)
-          }, 2000)
-        }
-      } catch (err: any) {
-        console.error("QR verification failed:", err)
-        if (err.response?.status === 404) {
-          setQrResult("❌ Customer not found in database")
-        } else if (err.response?.status === 400) {
-          setQrResult("❌ Invalid QR code format")
-        } else {
-          setQrResult("❌ QR verification failed - Server error")
-        }
-        setTimeout(() => {
-          setQrResult("")
-          setIsScanning(true) // Resume scanning
-          setScanSuccess(false)
-        }, 2000)
-      }
-    }
+    e.target.value = ""
   }
 
   useEffect(() => {
-    let interval: any
-    if (cameraActive && isScanning) {
-      interval = setInterval(scanQRCode, 500) // Faster scanning on mobile
-    }
-    return () => clearInterval(interval)
-  }, [cameraActive, isScanning])
+    return () => { stopCamera() }
+  }, [])
 
   // Clear scanned customer
   const clearScannedCustomer = () => {
@@ -444,11 +361,6 @@ export default function BarberDashboard() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl md:text-3xl font-bold text-white">QR Scanner</h2>
             <div className="flex gap-2">
-              {cameraActive && availableCameras.length > 1 && (
-                <Button onClick={switchCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20 hidden md:flex">
-                  <RotateCcw className="h-4 w-4 mr-2" /> Switch Camera
-                </Button>
-              )}
               {cameraActive && (
                 <Button onClick={stopCamera} variant="outline" className="border-orange-600 text-orange-400 hover:bg-orange-900/20">
                   <ArrowUp className="h-4 w-4 mr-2" /> Stop
@@ -460,112 +372,79 @@ export default function BarberDashboard() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Scan className="h-5 w-5" />
-                Live QR Scanner
+                QR Scanner
               </CardTitle>
               <CardDescription className="text-gray-400">
-                {cameraActive 
-                  ? "Point camera at QR code to scan" 
-                  : "Click 'Start Scanner' to begin scanning"}
+                Take a photo of customer's QR code or use live camera
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Scanner Container with Overlay */}
-              <div className="relative bg-black rounded-lg border-2 border-dashed border-orange-600 overflow-hidden">
-                <video 
-                  ref={videoRef} 
-                  className="w-full h-full object-cover rounded-lg"
-                  style={{ 
-                    transform: facingMode === "user" ? 'scaleX(-1)' : 'none',
-                    minHeight: '300px'
-                  }}
+              {/* Photo Capture - Primary Method */}
+              <div className="space-y-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  id="qr-photo-capture"
+                  className="hidden"
+                  onChange={handleFileUpload}
                 />
-                
-                {/* Scanner Overlay */}
-                {cameraActive && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    {/* Scanning Frame */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-orange-400 rounded-lg shadow-lg">
-                      {/* Corner borders */}
-                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-orange-400 rounded-tl"></div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-orange-400 rounded-tr"></div>
-                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-orange-400 rounded-bl"></div>
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-orange-400 rounded-br"></div>
-                      
-                      {/* Scanning Animation */}
-                      {isScanning && (
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-orange-400 animate-pulse shadow-lg shadow-orange-400/50"></div>
-                      )}
+                <label
+                  htmlFor="qr-photo-capture"
+                  className="flex items-center justify-center gap-3 w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-4 px-6 rounded-lg cursor-pointer transition-colors text-lg"
+                >
+                  <Camera className="h-6 w-6" />
+                  Take Photo of QR Code
+                </label>
+                <p className="text-center text-gray-500 text-xs">Fastest method — opens your camera, snap the QR, done</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-700"></div>
+                <span className="text-gray-500 text-sm">or use live scanner</span>
+                <div className="flex-1 h-px bg-gray-700"></div>
+              </div>
+
+              {/* Live Camera Scanner - Secondary */}
+              <div className="relative bg-black rounded-lg border-2 border-dashed border-gray-700 overflow-hidden" style={{ minHeight: cameraActive ? '300px' : '0px' }}>
+                <div id="qr-reader" className="w-full" />
+
+                {scanSuccess && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center animate-ping">
+                      <Check className="h-8 w-8 text-white" />
                     </div>
-                    
-                    {/* Success Animation */}
-                    {scanSuccess && (
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center animate-ping">
-                          <Check className="h-8 w-8 text-white" />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Instructions */}
-                    <div className="absolute bottom-4 left-0 right-0 text-center">
-                      <p className="text-white bg-black/50 px-3 py-1 rounded-full text-sm inline-block">
-                        📱 Position QR code within frame
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Placeholder when camera is off */}
-                {!cameraActive && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 p-4">
-                    <div className="w-24 h-24 bg-orange-900/20 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-orange-600/50">
-                      <Camera className="h-12 w-12 opacity-50" />
-                    </div>
-                    <p className="text-center text-lg mb-2">QR Code Scanner</p>
-                    <p className="text-center text-sm text-gray-500 mb-4">
-                      Scan customer QR codes to add loyalty points
-                    </p>
                   </div>
                 )}
               </div>
-              
-              <canvas ref={canvasRef} width={640} height={480} className="hidden"></canvas>
-              
+
+              <div id="qr-file-reader" className="hidden"></div>
+
               <div className="flex flex-col sm:flex-row gap-2">
                 {!cameraActive ? (
-                  <Button 
-                    onClick={() => startCamera("environment")} 
-                    className="bg-orange-600 hover:bg-orange-700 text-white py-3 text-base"
-                    size="lg"
+                  <Button
+                    onClick={startCamera}
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
                   >
-                    <Camera className="h-5 w-5 mr-2" /> Start Scanner
+                    <Scan className="h-4 w-4 mr-2" /> Start Live Scanner
                   </Button>
                 ) : (
-                  <div className="flex gap-2 w-full">
-                    <Button 
-                      onClick={() => setIsScanning(!isScanning)} 
-                      variant={isScanning ? "default" : "outline"}
-                      className={isScanning 
-                        ? "bg-green-600 hover:bg-green-700 text-white flex-1" 
-                        : "border-orange-600 text-orange-400 hover:bg-orange-900/20 flex-1"
-                      }
-                    >
-                      {isScanning ? (
-                        <>
-                          <Scan className="h-4 w-4 mr-2 animate-pulse" />
-                          Scanning...
-                        </>
-                      ) : (
-                        <>
-                          <Scan className="h-4 w-4 mr-2" />
-                          Resume Scan
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                  >
+                    <Scan className="h-4 w-4 mr-2 animate-pulse" />
+                    Scanning...
+                  </Button>
                 )}
               </div>
-              
+
+              {qrResult && (
+                <div className="text-center py-3 px-4 rounded-lg bg-red-900/20 border border-red-500/30">
+                  <p className="text-red-400 font-medium">{qrResult}</p>
+                </div>
+              )}
+
               {/* Results */}
               {scannedCustomer && (
                 <Card className="bg-gray-900 border-green-900/20 mt-4 animate-in fade-in duration-500">

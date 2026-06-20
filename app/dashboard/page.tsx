@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import axios from "axios"
 import { BACKEND_URL } from "@/components/config"
+import QRCode from "react-qr-code"
 
 export default function Component() {
   const router = useRouter()
@@ -93,12 +94,8 @@ export default function Component() {
             <CardTitle className="text-white">Your QR Code</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="w-full aspect-square bg-white rounded-xl border border-orange-500/20 overflow-hidden">
-              <img
-                src={details.name.qrImage}
-                alt="QR Code"
-                className="w-full h-full object-contain p-4"
-              />
+            <div className="w-full aspect-square bg-white rounded-xl border border-orange-500/20 overflow-hidden flex items-center justify-center p-6">
+              <QRCode value={details.name.data} size={256} />
             </div>
             
           </CardContent>
